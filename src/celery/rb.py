@@ -85,6 +85,8 @@ def delete_task(app, task_name):
 
 if __name__ == "__main__":
     import redis
-    from celapp.celery import app
-    rd = redis.Redis(host="localhost", port=6379, db=2)
+
+    from src.celery.celery import app
+
+    rd = redis.Redis(host="localhost", port=6379, db=1)
     print(list_redbeat_tasks(app, rd))
