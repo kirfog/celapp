@@ -2,6 +2,7 @@ import pytest
 
 pytest_plugins = ("celery.contrib.pytest", )
 
+
 @pytest.fixture(scope='session')
 def celery_config():
     return {
@@ -10,4 +11,3 @@ def celery_config():
         'redbeat_redis_url': 'redis://localhost:6379/11',
         'redbeat_lock_key': None,
     }
-

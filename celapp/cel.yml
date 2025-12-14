@@ -1,0 +1,39 @@
+task1:
+  enabled: true
+  task: celapp.tasks.task1
+  schedule: 2.0
+  args: null
+  kwargs: null
+  options:
+    queue: celery
+
+task2:
+  enabled: true
+  task: celapp.tasks.task2
+  args:
+  kwargs:
+  schedule:
+    hour: 8
+    minute: 38
+  options:
+    queue: celery
+
+task3:
+  enabled: true
+  task: celapp.tasks.task3
+  schedule:
+    minute: '*/1'
+  args: [1, 2]
+  kwargs:
+  options:
+    queue: celery
+
+task4:
+  enabled: true
+  task: celapp.tasks.task4
+  schedule: 2.0
+  args: [4, 2]
+  kwargs:
+  options:
+    queue: celery
+

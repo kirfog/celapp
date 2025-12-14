@@ -1,6 +1,7 @@
 from celapp.tasks import mul, su
 from redbeat import RedBeatSchedulerEntry as Entry
 
+
 def test_celery_raw_fixtures(celery_app, celery_worker):
     assert mul.delay(4, 4).get(timeout=10) == 16
 
@@ -12,6 +13,7 @@ def test_create_task(celery_app, celery_worker):
 
     celery_worker.reload()
     assert mul.delay(4, 4).get(timeout=10) == 16
+
 
 def test_su(celery_app, celery_worker):
     assert su.delay(4, 4).get(timeout=10) == 8
