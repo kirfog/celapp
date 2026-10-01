@@ -1,56 +1,96 @@
+from celery.schedules import crontab, schedule
 from redbeat import RedBeatSchedulerEntry as Entry
 
-from celery.schedules import crontab, schedule
-from src.celery.tasks import mul, su
+from src.celery.tasks import task4
 
 
-def test_celery_raw_fixtures(celery_app, celery_worker):
-    assert mul.delay(4, 4).get(timeout=10) == 16
+def test_task4(celery_app, celery_worker):
+    res = {"task": "task4", "result": 4 * 4}
+    assert task4.delay(4, 4).get(timeout=10) == res
 
 
-def test_create_task(celery_app, celery_worker):
+def create_task(celery_app):
     @celery_app.task
-    def mul(x, y):
-        return x * y
+    def test_task(x, y, mult=1):
+        return x * y * mult
 
-    celery_worker.reload()
-    assert mul.delay(4, 4).get(timeout=10) == 16
-
-
-def test_su(celery_app, celery_worker):
-    assert su.delay(4, 4).get(timeout=10) == 8
+    return test_task
 
 
-def test_add_redbeat(celery_app, celery_worker):
-    @celery_app.task
-    def test_task(x, y):
-        return x * y
-
+def add_task_schedule(celery_app):
     sch = schedule(run_every=10.0)
-    anentry = Entry(
-        "test_task", "src.celery.tasks.test_task", schedule=sch, args=[1, 2], app=celery_app
+    entry = Entry(
+        "test_task",
+        "tests.test_celery.test_task",
+        schedule=sch,
+        args=[1, 2],
+        app=celery_app,
     )
-    anentry.save()
-    entry = Entry.from_key("redbeat:test_task", app=celery_app)
-    assert entry.enabled
-    assert entry.name == "test_task"
-    assert entry.task == "src.celery.tasks.test_task"
-    assert entry.schedule == schedule(run_every=10.0)
-
-    entry.enabled = False
     entry.save()
-    entry = Entry.from_key("redbeat:test_task", app=celery_app)
-    assert not entry.enabled
+    return entry
 
+
+def change_task_schedule(celery_app):
+    entry = Entry.from_key("redbeat:test_task", app=celery_app)
     sch = crontab(minute=10, hour=10)
     entry.schedule = sch
     entry.save()
     entry = Entry.from_key("redbeat:test_task", app=celery_app)
+    return entry
+
+
+def disable_task(celery_app):
+    entry = Entry.from_key("redbeat:test_task", app=celery_app)
+    entry.enabled = False
+    entry.save()
+    return entry
+
+
+def delete_task(celery_app):
+    entry = Entry.from_key("redbeat:test_task", app=celery_app)
+    entry.delete()
+    return entry
+
+
+def test_add_task(celery_app, celery_worker):
+    test_task = create_task(celery_app)
+    celery_worker.reload()
+    assert test_task.delay(4, 4, mult=4).get(timeout=10) == 64
+
+
+def test_add_task_schedule(celery_app, celery_worker):
+    create_task(celery_app)
+    add_task_schedule(celery_app)
+    entry = Entry.from_key("redbeat:test_task", app=celery_app)
+    assert entry.enabled
+    assert entry.name == "test_task"
+    assert entry.task == "tests.test_celery.test_task"
+    assert entry.schedule == schedule(run_every=10.0)
+
+
+def test_change_task_schedule(celery_app, celery_worker):
+    create_task(celery_app)
+    add_task_schedule(celery_app)
+    entry = change_task_schedule(celery_app)
     assert entry.schedule == crontab(minute=10, hour=10)
 
-    entry.delete()
+
+def test_disable_task(celery_app, celery_worker):
+    create_task(celery_app)
+    add_task_schedule(celery_app)
+    change_task_schedule(celery_app)
+    entry = disable_task(celery_app)
+    assert not entry.enabled
+
+
+def test_delete_task(celery_app, celery_worker):
+    create_task(celery_app)
+    add_task_schedule(celery_app)
+    change_task_schedule(celery_app)
+    disable_task(celery_app)
+    delete_task(celery_app)
     try:
-        entry = Entry.from_key("redbeat:test_task", app=celery_app)
+        Entry.from_key("redbeat:test_task", app=celery_app)
         assert False
     except KeyError:
         assert True
